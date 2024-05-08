@@ -16,9 +16,9 @@ class Agent:
             clone = copy(curBoard)
             makeMove(clone, m, -self.playerId)
             value = min(value, self.maxSearch(clone, curBoard, depth - 1, alpha, beta))
+            beta = min(beta, value)
             if value <= alpha:
                 return value
-            beta = min(beta, value)
         # print("min", depth, value)
         return value
 
@@ -31,9 +31,9 @@ class Agent:
             clone = copy(curBoard)
             makeMove(clone, m, self.playerId)
             value = max(value, self.minSearch(clone, curBoard, depth - 1, alpha, beta))
+            alpha = max(alpha, value)
             if value >= beta:
                 return value
-            alpha = max(alpha, value)
         # print("max", depth, value)
         return value
 
@@ -59,10 +59,6 @@ class Agent:
                 bestSoFar = value
                 bestMoves.append(m)
                 bestValues.append(value)
-        # for move in bestMoves:
-        #     print('(' + str(move.start.x) + ', ' + str(move.start.y) +
-        #       ')->(' + str(move.end.x) + ', ' + str(move.end.y) + ')')
-        # print(bestValues)
         if len(bestMoves) == 1:
             return bestMoves[0]
         finalBestMoves = []
