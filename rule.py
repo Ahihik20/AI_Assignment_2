@@ -218,8 +218,7 @@ def getValidMoves2(curBoard, preBoard, playerId, currPos):
     if len(bayMoves) != 0:
         for position in canMoveTo(curBoard, Position(currPos[0], currPos[1]), playerId):
             if position.x == bayMoves[0].end.x and position.y == bayMoves[0].end.y:
-                return bayMoves
-        return []
+                validMoves.append(Move(Position(currPos[0], currPos[1]),position))
     for position in canMoveTo(curBoard, Position(currPos[0], currPos[1]), playerId):
         validMoves.append(Move(Position(currPos[0], currPos[1]), position))
     return validMoves

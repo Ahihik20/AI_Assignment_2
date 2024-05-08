@@ -32,7 +32,7 @@ class UI:
         pygame.display.set_caption('Co Ganh')
         self.running = True
         self.state = "init"
-        self.listAlgorithm = ["Agent(EASY) VS Agent", "You VS Agent"]
+        self.listAlgorithm = ["Agent(EASY) VS Agent", "You VS Agent", "You1 VS You2"]
         self.listAgentLevel = ["NORMAL", "MEDIUM", "HARD"]
         self.algorithmIdx = 0
         self.levelIdx = 0
@@ -58,7 +58,7 @@ class UI:
             for event in event_list:
                 if event.type == pygame.QUIT:
                     self.running = False
-                if event.type == pygame.MOUSEBUTTONUP and self.state == "human":
+                if event.type == pygame.MOUSEBUTTONUP and (self.state == "human" or self.state == "human1"):
 
                     if self.playerChoosingState == 0 or self.playerChoosingState == 1:
                         # print("check")
@@ -74,7 +74,6 @@ class UI:
                                         validMoves = getValidMoves2(self.solution, self.preBoard, -1, self.playerChoose)
                                         self.posNextMove = []
                                         check = True
-                                        # print(len(validMoves))
                                         for move in validMoves:
                                             self.posNextMove.append([move.end.x, move.end.y])
                                         break
@@ -100,6 +99,49 @@ class UI:
                             self.playerChoosingState = 2
                             self.playerChoose = []
                             self.posNextMove = []
+                
+                if event.type == pygame.MOUSEBUTTONUP and (self.state == "human2"):
+
+                    if self.playerChoosingState == 0 or self.playerChoosingState == 1:
+                        # print("check")
+                        cellSize = BOARD_SIZE / 4
+                        mpos = pygame.mouse.get_pos()
+                        for i in range(5):
+                            check = False
+                            for j in range(5):
+                                if self.solution[i][j] == 1:
+                                    if self.checkInside(mpos, gridSoluPos[0] + cellSize * j,
+                                                        gridSoluPos[1] + cellSize * i, 15):
+                                        self.playerChoose = [i, j]
+                                        validMoves = getValidMoves2(self.solution, self.preBoard, 1, self.playerChoose)
+                                        self.posNextMove = []
+                                        check = True
+                                        for move in validMoves:
+                                            self.posNextMove.append([move.end.x, move.end.y])
+                                        break
+                            if check is True:
+                                self.playerChoosingState = 1
+                                break
+                    if self.playerChoosingState == 0 or self.playerChoosingState == 1:
+                        # print("check1")
+                        cellSize = BOARD_SIZE / 4
+                        mpos = pygame.mouse.get_pos()
+                        check = False
+                        for pos in self.posNextMove:
+                            if self.checkInside(mpos, gridSoluPos[0] + cellSize * pos[1],
+                                                gridSoluPos[1] + cellSize * pos[0], 15):
+                                # print(pos[0], pos[1])
+                                check = True
+                                move = Move(Position(self.playerChoose[0], self.playerChoose[1]),
+                                            Position(pos[0], pos[1]))
+                                break
+                        if check == True:
+                            self.preBoard = copy(self.solution)
+                            self.solution = makeMove2(self.solution, move, 1)
+                            self.playerChoosingState = 2
+                            self.playerChoose = []
+                            self.posNextMove = []
+                
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RIGHT and self.state == "init":
                         if self.levelIdx < len(self.listAgentLevel) - 1:
@@ -127,11 +169,16 @@ class UI:
                             self.nowTurn = self.firstTurn
                             if self.algorithmIdx == 0:
                                 self.state = "execute"
-                            else:
+                            elif self.algorithmIdx == 1:
                                 if self.firstTurn == -1:
                                     self.state = "human"
                                 else:
                                     self.state = "bot"
+                            else:
+                                if self.firstTurn == -1:
+                                    self.state = "human1"
+                                else:
+                                    self.state = "human2"
                         if self.state == "done":
                             self.solIdx = 0
                             self.firstTurn = 0
@@ -155,15 +202,12 @@ class UI:
                         secondAgent = agent2
                     else:
                         secondAgent = agent1
-                    # print(self.firstTurn)
-                    # print(secondAgent.depth)
                     self.solution = self.game.play(firstTurn=self.firstTurn, player1=secondAgent, player2=agent4)
                     self.numOfTurn = len(self.solution) - 1
                     if self.numOfTurn % 2 == 1:
                         self.nowTurn = -1 if self.firstTurn == -1 else 1
                     else:
                         self.nowTurn = 1 if self.firstTurn == -1 else -1
-                    # print(self.solution)
                 self.state = "playing"
             if self.state == "playing":
                 self.playingScreen()
@@ -202,9 +246,32 @@ class UI:
                         self.numOfTurn = self.numOfTurn + 1
                         self.nowTurn = 1
                         self.state = "bot"
+            if self.state == "human1":
+                # print(self.solution)
+                self.stageScreen()
+                if self.playerChoosingState == 2:
+                    if isWin(self.solution):
+                        self.state = "done"
+                    else:
+                        self.playerChoosingState = 0
+                        self.numOfTurn = self.numOfTurn + 1
+                        self.nowTurn = 1
+                        self.state = "human2"
+            if self.state == "human2":
+                # print(self.solution)
+                self.stageScreen()
+                if self.playerChoosingState == 2:
+                    if isWin(self.solution):
+                        self.state = "done"
+                    else:
+                        self.playerChoosingState = 0
+                        self.numOfTurn = self.numOfTurn + 1
+                        self.nowTurn = -1
+                        self.state = "human1"
             if self.state == "done":
                 self.solutionScreen()
             pygame.display.update()
+            
         pygame.quit()
 
     def checkInside(self, mpos, x, y, rad):
@@ -251,9 +318,15 @@ class UI:
         # pygame.draw.circle(self.window, BLUE, (pos[0], pos[1]), 17)
         # pygame.draw.circle(self.window, RED, (pos[0], pos[1]), 15)
         if len(self.playerChoose) != 0:
-            pygame.draw.circle(self.window, BLACK,
+            if self.state == "human" or self.state == "human1":
+                pygame.draw.circle(self.window, BLACK,
                                (pos[0] + self.playerChoose[1] * cellSize, pos[1] + self.playerChoose[0] * cellSize), 18)
-            pygame.draw.circle(self.window, RED,
+                pygame.draw.circle(self.window, RED,
+                               (pos[0] + self.playerChoose[1] * cellSize, pos[1] + self.playerChoose[0] * cellSize), 15)
+            if self.state == "human2":
+                pygame.draw.circle(self.window, BLACK,
+                               (pos[0] + self.playerChoose[1] * cellSize, pos[1] + self.playerChoose[0] * cellSize), 18)
+                pygame.draw.circle(self.window, BLUE,
                                (pos[0] + self.playerChoose[1] * cellSize, pos[1] + self.playerChoose[0] * cellSize), 15)
 
         if len(self.posNextMove) != 0:
@@ -326,10 +399,15 @@ class UI:
         if self.firstTurn == -1:
             if self.algorithmIdx == 0:
                 ftText = "Agent(EASY)"
-            else:
+            elif self.algorithmIdx == 1:
                 ftText = "You"
+            else:
+                ftText = "You1"
         else:
-            ftText = "Agent(" + str(self.listAgentLevel[self.levelIdx]) + ")"
+            if self.algorithmIdx != 2:
+                ftText = "Agent(" + str(self.listAgentLevel[self.levelIdx]) + ")"
+            else:
+                ftText = "You2"
 
         ftText = ftSize.render("First Turn: " + ftText, True, BLACK)
         ftRect = ftText.get_rect(center=(300, 550))
@@ -361,10 +439,15 @@ class UI:
         if self.firstTurn == -1:
             if self.algorithmIdx == 0:
                 ftText = "Agent(EASY)"
-            else:
+            elif self.algorithmIdx == 1:
                 ftText = "You"
+            else:
+                ftText = "You1"
         else:
-            ftText = "Agent(" + str(self.listAgentLevel[self.levelIdx]) + ")"
+            if self.algorithmIdx != 2:
+                ftText = "Agent(" + str(self.listAgentLevel[self.levelIdx]) + ")"
+            else:
+                ftText = "You2"
 
         ftText = ftSize.render("First Turn: " + ftText, True, BLACK)
         ftRect = ftText.get_rect(center=(300, 550))
@@ -387,8 +470,14 @@ class UI:
         self.window.blit(algorithmDes, algorithmRect)
 
         algorithmSize = pygame.font.Font('gameFont.ttf', 24)
-        algorithmText = algorithmSize.render("You(Red) VS Agent(" + str(self.listAgentLevel[self.levelIdx]) + ")-Blue",
-                                             True, BLACK)
+        rd = ""
+        if self.algorithmIdx == 0:
+            rd = "Agent(EASY)-Red" " VS Agent(" + str(self.listAgentLevel[self.levelIdx]) + ")-Blue"
+        elif self.algorithmIdx == 1:
+            rd = "You(Red)" + " VS Agent(" + str(self.listAgentLevel[self.levelIdx]) + ")-Blue"
+        else:
+            rd = "You1(Red) VS You2(Blue)"
+        algorithmText = algorithmSize.render(rd, True, BLACK)
         algorithmRect = algorithmText.get_rect(center=(300, 510))
         self.window.blit(algorithmText, algorithmRect)
 
@@ -397,10 +486,15 @@ class UI:
         if self.firstTurn == -1:
             if self.algorithmIdx == 0:
                 ftText = "Agent(EASY)"
-            else:
+            elif self.algorithmIdx == 1:
                 ftText = "You"
+            else:
+                ftText = "You1"
         else:
-            ftText = "Agent(" + str(self.listAgentLevel[self.levelIdx]) + ")"
+            if self.algorithmIdx != 2:
+                ftText = "Agent(" + str(self.listAgentLevel[self.levelIdx]) + ")"
+            else:
+                ftText = "You2"
 
         ftText = ftSize.render("First Turn: " + ftText, True, BLACK)
         ftRect = ftText.get_rect(center=(300, 550))
@@ -427,9 +521,14 @@ class UI:
         self.window.blit(algorithmDes, algorithmRect)
 
         algorithmSize = pygame.font.Font('gameFont.ttf', 24)
-        algorithmText = algorithmSize.render(
-            "Agent(EASY)-Red" if self.algorithmIdx == 0 else "You(Red)" + " VS Agent(" + str(
-                self.listAgentLevel[self.levelIdx]) + ")-Blue", True, BLACK)
+        rd = ""
+        if self.algorithmIdx == 0:
+            rd = "Agent(EASY)-Red" " VS Agent(" + str(self.listAgentLevel[self.levelIdx]) + ")-Blue"
+        elif self.algorithmIdx == 1:
+            rd = "You(Red)" + " VS Agent(" + str(self.listAgentLevel[self.levelIdx]) + ")-Blue"
+        else:
+            rd = "You1(Red) VS You2(Blue)"
+        algorithmText = algorithmSize.render(rd, True, BLACK)
         algorithmRect = algorithmText.get_rect(center=(300, 500))
         self.window.blit(algorithmText, algorithmRect)
 
@@ -438,10 +537,15 @@ class UI:
         if self.firstTurn == -1:
             if self.algorithmIdx == 0:
                 ftText = "Agent(EASY)"
-            else:
+            elif self.algorithmIdx == 1:
                 ftText = "You"
+            else:
+                ftText = "You1"
         else:
-            ftText = "Agent(" + str(self.listAgentLevel[self.levelIdx]) + ")"
+            if self.algorithmIdx != 2:
+                ftText = "Agent(" + str(self.listAgentLevel[self.levelIdx]) + ")"
+            else:
+                ftText = "You2"
 
         ftText = ftSize.render("First Turn: " + ftText, True, BLACK)
         ftRect = ftText.get_rect(center=(300, 535))
@@ -453,9 +557,17 @@ class UI:
         self.window.blit(turns, turnsRec)
 
         if self.nowTurn == -1:
-            wn = "Agent(EASY)" if self.algorithmIdx == 0 else "You"
+            if self.algorithmIdx == 0:
+                wn = "Agent(EASY)"
+            elif self.algorithmIdx == 1:
+                wn = "You"
+            else:
+                wn = "You1"
         else:
-            wn = "Agent(" + str(self.listAgentLevel[self.levelIdx]) + ")"
+            if self.algorithmIdx != 2:
+                wn = "Agent(" + str(self.listAgentLevel[self.levelIdx]) + ")"
+            else:
+                wn = "You2"
 
         winner = resultSize.render('Winner: ' + wn, True, BLACK)
         winnerRec = winner.get_rect(center=(300, 40))
@@ -466,5 +578,5 @@ class UI:
         desRect = desText.get_rect(center=(300, 570))
         self.window.blit(desText, desRect)
 
-        self.draw_board(self.solution[len(self.solution) - 1] if type(self.solution[0][0]) is list else self.solution,
+        self.draw_board(self.solution[0] if type(self.solution[0][0]) is list else self.solution,
                         BOARD_SIZE, gridSoluPos)
